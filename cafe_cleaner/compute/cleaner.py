@@ -96,25 +96,27 @@ def compute_cleanup():
     for key in keys:
         try:
             keypairs_client.delete_keypair(key.name)
-        except:
-            print 'Failed to delete key {id}.'.format(id=key.id)
+        except Exception:
+            print 'Failed to delete key {id}: {exception}'.format(
+                id=key.id, exception=traceback.format_exc())
 
     servers = servers_client.list_servers_with_detail().entity
     print 'Preparing to delete {count} servers...'.format(count=len(servers))
     for server in servers:
         try:
             servers_client.delete_server(server.id)
-        except:
-            print 'Failed to delete server {id}.'.format(id=server.id)
+        except Exception:
+            print 'Failed to delete server {id}: {exception}'.format(
+                id=server.id, exception=traceback.format_exc())
 
     images = images_client.list_images().entity
     print 'Preparing to delete {count} images...'.format(count=len(images))
     for image in images:
         try:
             images_client.delete_image(image.id)
-        except:
-            traceback.print_exc()
-            print 'Failed to delete image {id}.'.format(id=image.id)
+        except Exception:
+            print 'Failed to delete image {id}: {exception}'.format(
+                id=image.id, exception=traceback.format_exc())
 
 
 if __name__ == '__main__':
