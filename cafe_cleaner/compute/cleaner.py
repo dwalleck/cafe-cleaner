@@ -15,6 +15,8 @@ limitations under the License.
 """
 
 import argparse
+import traceback
+
 from cafe.configurator.managers import TestEnvManager
 
 from cloudcafe.compute.config import ComputeEndpointConfig, \
@@ -104,6 +106,15 @@ def compute_cleanup():
             servers_client.delete_server(server.id)
         except:
             print 'Failed to delete server {id}.'.format(id=server.id)
+
+    images = images_client.list_images().entity
+    print 'Preparing to delete {count} images...'.format(count=len(images))
+    for image in images:
+        try:
+            images_client.delete_image(image.id)
+        except:
+            traceback.print_exc()
+            print 'Failed to delete image {id}.'.format(id=image.id)
 
 
 if __name__ == '__main__':
