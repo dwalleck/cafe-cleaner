@@ -90,7 +90,6 @@ def compute_cleanup():
     keypairs_client = KeypairsClient(**client_args)
     flavors_client.add_exception_handler(ExceptionHandler())
 
-
     keys = keypairs_client.list_keypairs().entity
     print 'Preparing to delete {count} keys...'.format(count=len(keys))
     for key in keys:
