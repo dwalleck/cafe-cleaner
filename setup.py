@@ -31,9 +31,9 @@ if sys.argv[-1] == 'publish':
 
 #Normal setup stuff
 setup(
-    name='cafe-cleaner',
+    name='cafe-compute-kit',
     version='0.1.0',
-    description='Cleans up all the things.',
+    description='Kit of helpful Compute scripts.',
     long_description='{0}\n\n{1}'.format(
         open('README.md').read(),
         open('HISTORY.md').read()),
@@ -42,7 +42,7 @@ setup(
     url='http://rackspace.com',
     packages=find_packages(),
     package_data={'': ['LICENSE', 'NOTICE']},
-    package_dir={'cafe': 'cafe'},
+    package_dir={'cafe_kit': 'cafe_kit'},
     include_package_data=True,
     license=open('LICENSE').read(),
     zip_safe=False,
@@ -58,4 +58,6 @@ setup(
     ),
     entry_points = {
         'console_scripts':
-        ['cafe-cleaner = cafe_cleaner.compute.cleaner:entry_point']})
+        ['cafe-cleaner = cafe_kit.compute.cleaner:entry_point',
+         'cafe-image-builder = cafe_kit.compute.image_builder:entry_point',
+         'reaper-report = cafe_kit.compute.reaper_report:entry_point']})

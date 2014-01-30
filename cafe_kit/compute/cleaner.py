@@ -108,8 +108,8 @@ def compute_cleanup():
             print 'Failed to delete server {id}: {exception}'.format(
                 id=server.id, exception=traceback.format_exc())
 
-    images = images_client.list_images().entity
-    print 'Preparing to delete {count} images...'.format(count=len(images))
+    images = images_client.list_images(image_type='snapshot').entity
+    print 'Preparing to delete {count} image snapshots...'.format(count=len(images))
     for image in images:
         try:
             images_client.delete_image(image.id)

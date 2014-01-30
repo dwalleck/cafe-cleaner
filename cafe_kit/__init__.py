@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-__title__ = 'cafe-cleaner'
+__title__ = 'cafe-kit'
 __author__ = 'Rackspace Cloud QE'
 __license__ = 'Apache License Version 2.0'
 __copyright__ = 'Copyright 2013 Rackspace Inc.'
