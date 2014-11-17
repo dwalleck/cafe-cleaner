@@ -15,16 +15,17 @@ limitations under the License.
 """
 
 import argparse
-import traceback
-import math
+import functools
 import multiprocessing
-from prettytable import PrettyTable
 import random
 import time
-import functools
+import traceback
+
+from prettytable import PrettyTable
 
 from cafe.configurator.managers import TestEnvManager
 from cloudcafe.compute.composites import ComputeComposite
+
 
 def entry_point():
 
@@ -53,7 +54,8 @@ def entry_point():
         "--ramp-up",
         nargs=1,
         metavar="<ramp_up>",
-        help="Amount of time in seconds over which server requests will be made")
+        help="Amount of time in seconds over which server "
+             "requests will be made")
 
     args = argparser.parse_args()
     config = str(args.config[0])
@@ -96,16 +98,20 @@ def create_server(ramp_up_time=0):
 def builder(num_servers, ramp_up_time):
 
     pool = multiprocessing.Pool(num_servers)
-    tests = [pool.apply_async(functools.partial(create_server, ramp_up_time=ramp_up_time))
+    create_func = functools.partial(
+        create_server, ramp_up_time=ramp_up_time)
+    start_time = time.time()
+    tests = [pool.apply_async(create_func)
              for iteration in xrange(num_servers)]
     results = [test.get() for test in tests]
+    finish_time = time.time()
 
     passes = 0
     errored = 0
+    total_time = finish_time - start_time
 
-    total_time = 0
-
-    results_table = PrettyTable(["Server Id", "Successful?", "Build Time (s)"])
+    results_table = PrettyTable(
+        ["Server Id", "Successful?", "Build Time (s)"])
     results_table.align["Server Id"] = "l"
 
     for passed, server_id, build_time in results:
@@ -122,6 +128,7 @@ def builder(num_servers, ramp_up_time):
     print "Passed: " + str(passes)
     print "Errored: " + str(errored)
     print "Average Build Time: " + str(average_time)
+    print "Execution time: " + str(total_time)
 
 if __name__ == '__main__':
     entry_point()
