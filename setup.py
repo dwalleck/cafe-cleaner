@@ -59,5 +59,6 @@ setup(
     entry_points = {
         'console_scripts':
         ['cafe-cleaner = cafe_kit.compute.cleaner:entry_point',
+         'cafe-builder = cafe_kit.compute.builder:entry_point',
          'cafe-image-builder = cafe_kit.compute.image_builder:entry_point',
          'reaper-report = cafe_kit.compute.reaper_report:entry_point']})
