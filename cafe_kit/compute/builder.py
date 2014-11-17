@@ -105,10 +105,11 @@ def builder(num_servers, ramp_up_time):
              for iteration in xrange(num_servers)]
     results = [test.get() for test in tests]
     finish_time = time.time()
+    run_time = finish_time - start_time
 
     passes = 0
     errored = 0
-    total_time = finish_time - start_time
+    total_time = 0
 
     results_table = PrettyTable(
         ["Server Id", "Successful?", "Build Time (s)"])
@@ -128,7 +129,7 @@ def builder(num_servers, ramp_up_time):
     print "Passed: " + str(passes)
     print "Errored: " + str(errored)
     print "Average Build Time: " + str(average_time)
-    print "Execution time: " + str(total_time)
+    print "Execution time: " + str(run_time)
 
 if __name__ == '__main__':
     entry_point()
