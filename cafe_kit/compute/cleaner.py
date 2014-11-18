@@ -29,13 +29,18 @@ from cloudcafe.compute.extensions.keypairs_api.client import KeypairsClient
 from cloudcafe.auth.config import UserAuthConfig, UserConfig
 from cloudcafe.auth.provider import AuthProvider
 
-from raxcafe.compute.extensions.networks_api.client import NovaNetworksClient
+raxcafe_installed = True
+try:
+    from raxcafe.compute.extensions.networks_api.client import NovaNetworksClient
+except Exception:
+    raxcafe_installed = False
 
 # these are networks that should not be deleted
 # placed in this format in order to allow easy modification
 public_network_id = "00000000-0000-0000-0000-000000000000"
 private_network_id = "11111111-1111-1111-1111-111111111111"
 preserved_networks = [public_network_id, private_network_id]
+
 
 def entry_point():
 
@@ -94,7 +99,7 @@ def compute_cleanup():
     flavors_client = FlavorsClient(**client_args)
     servers_client = ServersClient(**client_args)
     images_client = ImagesClient(**client_args)
-    nova_networks_client = NovaNetworksClient(**client_args)
+
     keypairs_client = KeypairsClient(**client_args)
     flavors_client.add_exception_handler(ExceptionHandler())
 
@@ -125,19 +130,21 @@ def compute_cleanup():
             print 'Failed to delete image {id}: {exception}'.format(
                 id=image.id, exception=traceback.format_exc())
 
-    raw_networks = nova_networks_client.list_networks().entity
+    if raxcafe_installed:
+        nova_networks_client = NovaNetworksClient(**client_args)
+        raw_networks = nova_networks_client.list_networks().entity
 
-    # remove the public and snet networks as well as any additional
-    # networks to be preserved
-    networks = [nw for nw in raw_networks if nw.id_ not in preserved_networks]
+        # remove the public and snet networks as well as any additional
+        # networks to be preserved
+        networks = [nw for nw in raw_networks if nw.id_ not in preserved_networks]
 
-    print 'Preparing to delete {count} networks...'.format(count=len(networks))
-    for network in networks:
-        try:
-            nova_networks_client.delete_network(network.id_)
-        except Exception:
-            print 'Failed to delete network {id}: {exception}'.format(
-                id=network.id_, exception=traceback.format_exc())
+        print 'Preparing to delete {count} networks...'.format(count=len(networks))
+        for network in networks:
+            try:
+                nova_networks_client.delete_network(network.id_)
+            except Exception:
+                print 'Failed to delete network {id}: {exception}'.format(
+                    id=network.id_, exception=traceback.format_exc())
 
 if __name__ == '__main__':
     entry_point()
