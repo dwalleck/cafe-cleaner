@@ -29,6 +29,9 @@ if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
     sys.exit()
 
+# Reading Requires
+requires = open('pip-requires').readlines()
+
 #Normal setup stuff
 setup(
     name='cafe-compute-kit',
@@ -44,6 +47,7 @@ setup(
     package_data={'': ['LICENSE', 'NOTICE']},
     package_dir={'cafe_kit': 'cafe_kit'},
     include_package_data=True,
+    install_requires=requires,
     license=open('LICENSE').read(),
     zip_safe=False,
     classifiers=(
