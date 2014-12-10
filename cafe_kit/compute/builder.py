@@ -25,6 +25,7 @@ from prettytable import PrettyTable
 
 from cafe.configurator.managers import TestEnvManager
 from cloudcafe.compute.composites import ComputeComposite
+from cloudcafe.compute.common.exceptions import BuildErrorException
 
 
 def entry_point():
@@ -77,22 +78,41 @@ def create_server(ramp_up_time=0):
     time.sleep(wait)
 
     passed = True
+    response = None
+    message = None
+
+    for i in range(5):
+        try:
+            compute = ComputeComposite()
+            break
+        except Exception as ex:
+            print 'Error authenticating:'
+            traceback.print_exc()
+            print 'Retrying.'
 
     start_time = time.time()
     try:
-        compute = ComputeComposite()
-        response = compute.servers.behaviors.create_active_server()
+        response = compute.servers.behaviors.create_server_with_defaults()
+        compute.servers.behaviors.wait_for_server_creation(
+            response.entity.id)
+
     except Exception as ex:
         traceback.print_exc()
         passed = False
     finish_time = time.time()
 
     server_id = None
-    if response.entity is not None:
+    if response and response.entity:
         server_id = response.entity.id
-        compute.servers.client.delete_server(server_id)
+        server = compute.servers.client.get_server(server_id).entity
 
-    return passed, server_id, finish_time - start_time
+        # If there is a fault for the server, add it to the result
+        if server.fault:
+            message = server.fault.message
+
+        compute.servers.client.delete_server(server.id)
+
+    return passed, server_id, finish_time - start_time, message
 
 
 def builder(num_servers, ramp_up_time):
@@ -112,16 +132,16 @@ def builder(num_servers, ramp_up_time):
     total_time = 0
 
     results_table = PrettyTable(
-        ["Server Id", "Successful?", "Build Time (s)"])
+        ["Server Id", "Successful?", "Build Time (s)", "Faults"])
     results_table.align["Server Id"] = "l"
 
-    for passed, server_id, build_time in results:
+    for passed, server_id, build_time, message in results:
         if passed:
             passes += 1
         else:
             errored += 1
         total_time += build_time
-        results_table.add_row([server_id, passed, build_time])
+        results_table.add_row([server_id, passed, build_time, message])
 
     average_time = total_time / num_servers
     print results_table
