@@ -17,7 +17,6 @@ limitations under the License.
 import argparse
 import functools
 import multiprocessing
-import random
 import time
 import traceback
 
@@ -25,58 +24,72 @@ from prettytable import PrettyTable
 
 from cafe.configurator.managers import TestEnvManager
 from cloudcafe.compute.composites import ComputeComposite
-from cloudcafe.compute.common.exceptions import BuildErrorException
 
 
 def entry_point():
 
     # Set up arguments
-    argparser = argparse.ArgumentParser(prog='cafe-builder')
+    argparser = argparse.ArgumentParser(prog='cafe-build-all')
 
     argparser.add_argument(
         "product",
-        nargs=1,
         metavar="<product>",
         help="Product name")
 
     argparser.add_argument(
         "config",
-        nargs=1,
         metavar="<config_file>",
         help="Product test config")
 
     argparser.add_argument(
-        "num_servers",
-        nargs=1,
-        metavar="<num_servers>",
-        help="Number of servers to build")
+        "--image-filter",
+        metavar="<image_filter>",
+        help="")
 
     argparser.add_argument(
-        "--ramp-up",
-        nargs=1,
-        metavar="<ramp_up>",
-        help="Amount of time in seconds over which server "
-             "requests will be made")
+        "--flavor-filter",
+        metavar="<flavor_filter>",
+        help="")
+
+    argparser.add_argument(
+        "--key",
+        metavar="<key>",
+        help="The name of a existing Compute keypair. "
+             "A keypair is required for OnMetal instances.")
 
     args = argparser.parse_args()
-    config = str(args.config[0])
-    product = str(args.product[0])
-    num_servers = int(args.num_servers[0])
-    ramp_up_time = 0
-    if args.ramp_up:
-        ramp_up_time = int(args.ramp_up[0])
+    config = args.config
+    product = args.product
+    key = args.key
 
     test_env_manager = TestEnvManager(product, config)
     test_env_manager.finalize()
-    builder(num_servers, ramp_up_time)
+    compute = ComputeComposite()
+
+    image_filter = args.image_filter
+    resp = compute.images.client.list_images()
+    images = resp.entity
+
+    filtered_images = filter(lambda i: image_filter in i.name, images)
+
+    flavor_filter = args.flavor_filter
+    resp = compute.flavors.client.list_flavors_with_detail()
+    flavors = resp.entity
+
+    filtered_flavors = filter(lambda f: flavor_filter in f.name, flavors)
+    pairs = list(generate_image_flavor_pairs(filtered_images, filtered_flavors))
+
+    builder(pairs, key)
     exit(0)
 
 
-def create_server(ramp_up_time=0):
-    local_random = random.Random()
-    wait = local_random.randint(0, ramp_up_time)
-    time.sleep(wait)
+def generate_image_flavor_pairs(images, flavors):
+    for image in images:
+        for flavor in flavors:
+            yield image.id, flavor.id
 
+
+def create_server(image_id, flavor_id, key=None):
     passed = True
     response = None
     message = None
@@ -92,7 +105,9 @@ def create_server(ramp_up_time=0):
 
     start_time = time.time()
     try:
-        response = compute.servers.behaviors.create_server_with_defaults()
+
+        response = compute.servers.behaviors.create_server_with_defaults(
+            image_ref=image_id, flavor_ref=flavor_id, key_name=key)
         compute.servers.behaviors.wait_for_server_creation(
             response.entity.id)
 
@@ -115,14 +130,15 @@ def create_server(ramp_up_time=0):
     return passed, server_id, finish_time - start_time, message
 
 
-def builder(num_servers, ramp_up_time):
+def builder(pairs, key):
+    num_servers = len(pairs)
+    pool = multiprocessing.Pool(8)
+    create_funcs = [functools.partial(create_server, image_id, flavor_id, key)
+                    for image_id, flavor_id in pairs]
 
-    pool = multiprocessing.Pool(num_servers)
-    create_func = functools.partial(
-        create_server, ramp_up_time=ramp_up_time)
     start_time = time.time()
     tests = [pool.apply_async(create_func)
-             for iteration in xrange(num_servers)]
+             for create_func in create_funcs]
     results = [test.get() for test in tests]
     finish_time = time.time()
     run_time = finish_time - start_time
