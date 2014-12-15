@@ -78,7 +78,6 @@ def entry_point():
 
     filtered_flavors = filter(lambda f: flavor_filter in f.name, flavors)
     pairs = list(generate_image_flavor_pairs(filtered_images, filtered_flavors))
-
     builder(pairs, key)
     exit(0)
 
@@ -117,9 +116,11 @@ def create_server(image_id, flavor_id, key=None):
     finish_time = time.time()
 
     server_id = None
+    image = compute.images.client.get_image(image_id)
     if response and response.entity:
         server_id = response.entity.id
         server = compute.servers.client.get_server(server_id).entity
+        image = compute.images.client.get_image(server.image.id).entity
 
         # If there is a fault for the server, add it to the result
         if server.fault:
@@ -127,7 +128,9 @@ def create_server(image_id, flavor_id, key=None):
 
         compute.servers.client.delete_server(server.id)
 
-    return passed, server_id, finish_time - start_time, message
+    return (
+        passed, server_id, image.name, flavor_id,
+        finish_time - start_time, message)
 
 
 def builder(pairs, key):
@@ -148,16 +151,16 @@ def builder(pairs, key):
     total_time = 0
 
     results_table = PrettyTable(
-        ["Server Id", "Successful?", "Build Time (s)", "Faults"])
+        ["Server Id", "Image", "Flavor", "Successful?", "Build Time (s)", "Faults"])
     results_table.align["Server Id"] = "l"
 
-    for passed, server_id, build_time, message in results:
+    for passed, server_id, image_name, flavor_id, build_time, message in results:
         if passed:
             passes += 1
         else:
             errored += 1
         total_time += build_time
-        results_table.add_row([server_id, passed, build_time, message])
+        results_table.add_row([server_id, image_name, flavor_id, passed, build_time, message])
 
     average_time = total_time / num_servers
     print results_table
