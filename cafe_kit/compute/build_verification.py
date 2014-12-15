@@ -116,7 +116,7 @@ def create_server(image_id, flavor_id, key=None):
     finish_time = time.time()
 
     server_id = None
-    image = compute.images.client.get_image(image_id)
+    image = compute.images.client.get_image(image_id).entity
     if response and response.entity:
         server_id = response.entity.id
         server = compute.servers.client.get_server(server_id).entity
