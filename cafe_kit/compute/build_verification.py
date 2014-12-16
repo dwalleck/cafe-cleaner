@@ -135,7 +135,7 @@ def create_server(image_id, flavor_id, key=None):
 
 def builder(pairs, key):
     num_servers = len(pairs)
-    pool = multiprocessing.Pool(8)
+    pool = multiprocessing.Pool(4)
     create_funcs = [functools.partial(create_server, image_id, flavor_id, key)
                     for image_id, flavor_id in pairs]
 
